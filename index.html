@@ -10,9 +10,10 @@
     <video id="video" autoplay></video>
     <p>Video ID: <span id="videoId"></span></p>
 
-    <script src="https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.0.0/firebase-firestore.js"></script>
-   <button onclick = "window.location.href = 'viewer.html'">go to view</button>
+    <!-- Firebase compat versions -->
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
+<button onclick = "window.location.href = 'viewer.html'">go to view</button>
     <script>
         const firebaseConfig = {
             apiKey: "AIzaSyAdgswtuwyKqO4yaO1TrsictKA5FR0gNds",
