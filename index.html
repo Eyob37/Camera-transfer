@@ -8,7 +8,9 @@
 <body>
     <h2>Camera Recorder</h2>
     <video id="video" autoplay></video>
-    <p>Video ID: <span id="videoId"></span></p>
+    <button id="captureBtn">Capture Photo</button>
+    <canvas id="canvas" style="display:none;"></canvas>
+    <p>Photo ID: <span id="photoId"></span></p>
 
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
@@ -31,39 +33,37 @@
         const storage = firebase.storage();
 
         const video = document.getElementById("video");
+        const canvas = document.getElementById("canvas");
+        const captureBtn = document.getElementById("captureBtn");
+        const photoIdDisplay = document.getElementById("photoId");
 
-        navigator.mediaDevices.getUserMedia({ video: true, audio: false })
-            .then(stream => {
-                video.srcObject = stream;
-                const mediaRecorder = new MediaRecorder(stream);
-                const chunks = [];
-                const videoId = Date.now().toString();
+        // Access camera
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => { video.srcObject = stream; })
+            .catch(error => console.error("Camera error:", error));
 
-                document.getElementById("videoId").innerText = videoId;
-                localStorage.setItem("videoId", videoId);
+        // Capture and upload photo
+        captureBtn.addEventListener("click", () => {
+            const photoId = Date.now().toString();
+            photoIdDisplay.innerText = photoId;
 
-                mediaRecorder.ondataavailable = event => {
-                    chunks.push(event.data);
-                };
+            const ctx = canvas.getContext("2d");
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-                mediaRecorder.onstop = () => {
-                    const blob = new Blob(chunks, { type: "video/webm" });
-                    const storageRef = storage.ref(`videos/${videoId}.webm`);
-                    
-                    storageRef.put(blob).then(snapshot => {
-                        snapshot.ref.getDownloadURL().then(url => {
-                            db.collection("videos").doc(videoId).set({
-                                url: url,
-                                timestamp: firebase.firestore.FieldValue.serverTimestamp()
-                            });
-                        });
+            canvas.toBlob(blob => {
+                const storageRef = storage.ref(`photos/${photoId}.jpg`);
+                
+                storageRef.put(blob).then(snapshot => {
+                    snapshot.ref.getDownloadURL().then(url => {
+                        db.collection("photos").doc(photoId).set({ url: url })
+                            .then(() => console.log("Photo saved!"))
+                            .catch(error => console.error("Firestore error:", error));
                     });
-                };
-
-                mediaRecorder.start();
-                setTimeout(() => mediaRecorder.stop(), 5000); // Record for 5 seconds
-            })
-            .catch(error => console.error("Error accessing camera:", error));
+                });
+            }, "image/jpeg");
+        });
     </script>
 </body>
 </html>
