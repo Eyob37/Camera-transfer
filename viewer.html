@@ -11,16 +11,17 @@
     <button onclick="watchLive()">Watch Live</button>
     <video id="video" controls></video>
 
-    <!-- Firebase compat versions -->
+    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-storage-compat.js"></script>
     <button onclick = "window.location.href = 'index.html'">back</button>
     <script>
         const firebaseConfig = {
             apiKey: "AIzaSyAdgswtuwyKqO4yaO1TrsictKA5FR0gNds",
             authDomain: "camera-transfer-8ff06.firebaseapp.com",
             projectId: "camera-transfer-8ff06",
-            storageBucket: "camera-transfer-8ff06.firebasestorage.app",
+            storageBucket: "camera-transfer-8ff06.appspot.com",
             messagingSenderId: "349896834545",
             appId: "1:349896834545:web:cf0baccbef7133b3c55850",
             measurementId: "G-SFBLTF1246"
@@ -32,9 +33,9 @@
         function watchLive() {
             const videoId = document.getElementById("videoIdInput").value;
             if (videoId) {
-                db.collection("videos").doc(videoId).onSnapshot(snapshot => {
+                db.collection("videos").doc(videoId).get().then(snapshot => {
                     if (snapshot.exists) {
-                        document.getElementById("video").src = snapshot.data().data;
+                        document.getElementById("video").src = snapshot.data().url;
                     } else {
                         console.error("Video not found");
                     }
