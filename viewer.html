@@ -3,13 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Live Viewer</title>
+    <title>Photo Viewer</title>
 </head>
 <body>
-    <h2>Live Viewer</h2>
-    <input type="text" id="videoIdInput" placeholder="Enter Video ID">
-    <button onclick="watchLive()">Watch Live</button>
-    <video id="video" controls></video>
+    <h2>Photo Viewer</h2>
+    <input type="text" id="photoIdInput" placeholder="Enter Photo ID">
+    <button onclick="viewPhoto()">View Photo</button>
+    <br><br>
+    <img id="photo" style="max-width: 100%; display: none;">
 
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
@@ -30,16 +31,17 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
-        function watchLive() {
-            const videoId = document.getElementById("videoIdInput").value;
-            if (videoId) {
-                db.collection("videos").doc(videoId).get().then(snapshot => {
+        function viewPhoto() {
+            const photoId = document.getElementById("photoIdInput").value;
+            if (photoId) {
+                db.collection("photos").doc(photoId).get().then(snapshot => {
                     if (snapshot.exists) {
-                        document.getElementById("video").src = snapshot.data().url;
+                        document.getElementById("photo").src = snapshot.data().url;
+                        document.getElementById("photo").style.display = "block";
                     } else {
-                        console.error("Video not found");
+                        console.error("Photo not found");
                     }
-                });
+                }).catch(error => console.error("Firestore error:", error));
             }
         }
     </script>
