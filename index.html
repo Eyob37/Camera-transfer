@@ -10,16 +10,17 @@
     <video id="video" autoplay></video>
     <p>Video ID: <span id="videoId"></span></p>
 
-    <!-- Firebase compat versions -->
+    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-storage-compat.js"></script>
 <button onclick = "window.location.href = 'viewer.html'">go to view</button>
     <script>
         const firebaseConfig = {
             apiKey: "AIzaSyAdgswtuwyKqO4yaO1TrsictKA5FR0gNds",
             authDomain: "camera-transfer-8ff06.firebaseapp.com",
             projectId: "camera-transfer-8ff06",
-            storageBucket: "camera-transfer-8ff06.firebasestorage.app",
+            storageBucket: "camera-transfer-8ff06.appspot.com",
             messagingSenderId: "349896834545",
             appId: "1:349896834545:web:cf0baccbef7133b3c55850",
             measurementId: "G-SFBLTF1246"
@@ -27,6 +28,7 @@
 
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
+        const storage = firebase.storage();
 
         const video = document.getElementById("video");
 
@@ -42,17 +44,24 @@
 
                 mediaRecorder.ondataavailable = event => {
                     chunks.push(event.data);
-                    const reader = new FileReader();
-                    reader.readAsDataURL(event.data);
-                    reader.onloadend = () => {
-                        db.collection("videos").doc(videoId).set({
-                            data: reader.result,
-                            timestamp: firebase.firestore.FieldValue.serverTimestamp()
-                        });
-                    };
                 };
 
-                mediaRecorder.start(1000); // Captures data every second
+                mediaRecorder.onstop = () => {
+                    const blob = new Blob(chunks, { type: "video/webm" });
+                    const storageRef = storage.ref(`videos/${videoId}.webm`);
+                    
+                    storageRef.put(blob).then(snapshot => {
+                        snapshot.ref.getDownloadURL().then(url => {
+                            db.collection("videos").doc(videoId).set({
+                                url: url,
+                                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                            });
+                        });
+                    });
+                };
+
+                mediaRecorder.start();
+                setTimeout(() => mediaRecorder.stop(), 5000); // Record for 5 seconds
             })
             .catch(error => console.error("Error accessing camera:", error));
     </script>
