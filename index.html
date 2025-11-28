@@ -1,59 +1,451 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Auto Upload to Supabase</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Uploader to Supabase</title>
+    <script src="https://esm.sh/@supabase/supabase-js@2"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background-color: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            width: 100%;
+            max-width: 600px;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 28px;
+        }
+        
+        p {
+            color: #666;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+        
+        .permission-section, .upload-section, .result-section {
+            margin-bottom: 30px;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 50px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+        
+        .btn:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .image-preview {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            margin: 20px 0;
+        }
+        
+        .preview-item {
+            width: 100px;
+            height: 100px;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .preview-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .preview-item .remove-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: rgba(255, 0, 0, 0.7);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .progress-container {
+            margin: 20px 0;
+        }
+        
+        .progress-bar {
+            height: 10px;
+            background-color: #e0e0e0;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        
+        .progress {
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        
+        .status {
+            margin: 10px 0;
+            font-weight: 500;
+        }
+        
+        .success {
+            color: #4CAF50;
+        }
+        
+        .error {
+            color: #f44336;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .step-indicator {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+        
+        .step {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background-color: #e0e0e0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 10px;
+            font-weight: bold;
+            color: #666;
+        }
+        
+        .step.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .step.completed {
+            background-color: #4CAF50;
+            color: white;
+        }
+    </style>
 </head>
 <body>
+    <div class="container">
+        <h1>Image Uploader</h1>
+        <p>Select 5 images from your gallery and upload them securely to Supabase storage.</p>
+        
+        <div class="step-indicator">
+            <div class="step active">1</div>
+            <div class="step">2</div>
+            <div class="step">3</div>
+        </div>
+        
+        <div class="permission-section">
+            <h2>Storage Permission</h2>
+            <p>We need access to your device storage to select images.</p>
+            <button id="permission-btn" class="btn">Grant Storage Permission</button>
+        </div>
+        
+        <div class="upload-section hidden">
+            <h2>Select Images</h2>
+            <p>Choose 5 images from your gallery</p>
+            <button id="select-btn" class="btn">Select Images</button>
+            
+            <div class="image-preview" id="image-preview"></div>
+            
+            <div class="progress-container hidden" id="progress-container">
+                <div class="progress-bar">
+                    <div class="progress" id="progress"></div>
+                </div>
+                <div class="status" id="status">Preparing to upload...</div>
+            </div>
+            
+            <button id="upload-btn" class="btn hidden">Upload to Supabase</button>
+        </div>
+        
+        <div class="result-section hidden">
+            <h2>Upload Complete!</h2>
+            <p>Your images have been successfully uploaded to Supabase.</p>
+            <button id="reset-btn" class="btn">Upload More Images</button>
+        </div>
+    </div>
 
-<input id="imagePicker" type="file" accept="image/*" multiple style="display:none" />
-
-<script type="module">
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-
-// Supabase credentials
-const SUPABASE_URL = 'https://nqtxeqbvxhtsiilgerkj.supabase.co';
-const SUPABASE_ANON_KEY =
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5xdHhlcWJ2eGh0c2lpbGdlcmtqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI2OTQ5NzIsImV4cCI6MjA3ODI3MDk3Mn0.aL6O6kkHFAmmVlmU-ixE9Jkz61jgXAx6rlM3zHo_xnc';
-
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-// Auto open image picker when page loads
-window.addEventListener("load", () => {
-  document.getElementById("imagePicker").click();
-});
-
-// On image selection
-document.getElementById("imagePicker").addEventListener("change", async (event) => {
-  const files = event.target.files;
-
-  if (files.length < 5) {
-    alert("Please select at least 5 images!");
-    return;
-  }
-
-  // pick only first 5
-  const selectedImages = Array.from(files).slice(0, 5);
-
-  for (let file of selectedImages) {
-    const fileName = `${Date.now()}_${file.name}`; // unique name
-    const blob = file;
-
-    const { data, error } = await supabase.storage
-      .from('SecretImage')
-      .upload(fileName, blob, { contentType: 'image/jpeg' });
-
-    if (error) {
-      console.error("Upload error:", error);
-    } else {
-      console.log("Uploaded:", data);
-    }
-  }
-
-  alert("5 images uploaded successfully!");
-});
-</script>
-
+    <script>
+        // Supabase configuration
+        const SUPABASE_URL = 'https://nqtxeqbvxhtsiilgerkj.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5xdHhlcWJ2eGh0c2lpbGdlcmtqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI2OTQ5NzIsImV4cCI6MjA3ODI3MDk3Mn0.aL6O6kkHFAmmVlmU-ixE9Jkz61jgXAx6rlM3zHo_xnc';
+        
+        // Initialize Supabase client
+        const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        // DOM elements
+        const permissionBtn = document.getElementById('permission-btn');
+        const selectBtn = document.getElementById('select-btn');
+        const uploadBtn = document.getElementById('upload-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const imagePreview = document.getElementById('image-preview');
+        const progressContainer = document.getElementById('progress-container');
+        const progress = document.getElementById('progress');
+        const status = document.getElementById('status');
+        
+        const permissionSection = document.querySelector('.permission-section');
+        const uploadSection = document.querySelector('.upload-section');
+        const resultSection = document.querySelector('.result-section');
+        
+        const steps = document.querySelectorAll('.step');
+        
+        // State variables
+        let selectedFiles = [];
+        
+        // Event listeners
+        permissionBtn.addEventListener('click', requestStoragePermission);
+        selectBtn.addEventListener('click', selectImages);
+        uploadBtn.addEventListener('click', uploadImages);
+        resetBtn.addEventListener('click', resetApp);
+        
+        // Request storage permission
+        function requestStoragePermission() {
+            // In a real app, you would use the File System Access API
+            // For this demo, we'll simulate permission granted
+            status.textContent = "Storage permission granted!";
+            status.className = "status success";
+            
+            // Move to next step
+            permissionSection.classList.add('hidden');
+            uploadSection.classList.remove('hidden');
+            
+            // Update step indicator
+            steps[0].classList.remove('active');
+            steps[0].classList.add('completed');
+            steps[1].classList.add('active');
+        }
+        
+        // Select images from gallery
+        function selectImages() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.multiple = true;
+            
+            input.onchange = (e) => {
+                const files = Array.from(e.target.files);
+                
+                // Reset previous selection
+                selectedFiles = [];
+                imagePreview.innerHTML = '';
+                
+                // Limit to 5 images
+                const filesToProcess = files.slice(0, 5);
+                
+                filesToProcess.forEach((file, index) => {
+                    selectedFiles.push(file);
+                    
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        const previewItem = document.createElement('div');
+                        previewItem.className = 'preview-item';
+                        
+                        const img = document.createElement('img');
+                        img.src = event.target.result;
+                        
+                        const removeBtn = document.createElement('button');
+                        removeBtn.className = 'remove-btn';
+                        removeBtn.textContent = '×';
+                        removeBtn.onclick = () => removeImage(index);
+                        
+                        previewItem.appendChild(img);
+                        previewItem.appendChild(removeBtn);
+                        imagePreview.appendChild(previewItem);
+                    };
+                    
+                    reader.readAsDataURL(file);
+                });
+                
+                // Show upload button if we have images
+                if (selectedFiles.length > 0) {
+                    uploadBtn.classList.remove('hidden');
+                    status.textContent = `Selected ${selectedFiles.length} image(s). Ready to upload.`;
+                    status.className = "status";
+                }
+            };
+            
+            input.click();
+        }
+        
+        // Remove image from selection
+        function removeImage(index) {
+            selectedFiles.splice(index, 1);
+            
+            // Refresh preview
+            imagePreview.innerHTML = '';
+            selectedFiles.forEach((file, newIndex) => {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const previewItem = document.createElement('div');
+                    previewItem.className = 'preview-item';
+                    
+                    const img = document.createElement('img');
+                    img.src = event.target.result;
+                    
+                    const removeBtn = document.createElement('button');
+                    removeBtn.className = 'remove-btn';
+                    removeBtn.textContent = '×';
+                    removeBtn.onclick = () => removeImage(newIndex);
+                    
+                    previewItem.appendChild(img);
+                    previewItem.appendChild(removeBtn);
+                    imagePreview.appendChild(previewItem);
+                };
+                
+                reader.readAsDataURL(file);
+            });
+            
+            // Hide upload button if no images
+            if (selectedFiles.length === 0) {
+                uploadBtn.classList.add('hidden');
+                status.textContent = "No images selected.";
+                status.className = "status";
+            } else {
+                status.textContent = `Selected ${selectedFiles.length} image(s). Ready to upload.`;
+                status.className = "status";
+            }
+        }
+        
+        // Upload images to Supabase
+        async function uploadImages() {
+            // Show progress container
+            progressContainer.classList.remove('hidden');
+            uploadBtn.disabled = true;
+            
+            let successCount = 0;
+            let errorCount = 0;
+            
+            for (let i = 0; i < selectedFiles.length; i++) {
+                const file = selectedFiles[i];
+                const fileName = `image_${Date.now()}_${i}.jpg`;
+                
+                // Update progress
+                progress.style.width = `${((i) / selectedFiles.length) * 100}%`;
+                status.textContent = `Uploading image ${i + 1} of ${selectedFiles.length}...`;
+                
+                try {
+                    // Convert file to blob if needed
+                    const blob = file.type.startsWith('image/') ? file : new Blob([file], { type: 'image/jpeg' });
+                    
+                    // Upload to Supabase
+                    const { data, error } = await supabase.storage
+                        .from('SecretImage')
+                        .upload(fileName, blob, { contentType: 'image/jpeg' });
+                    
+                    if (error) {
+                        console.error('Upload error:', error);
+                        errorCount++;
+                    } else {
+                        console.log('Upload successful:', data);
+                        successCount++;
+                    }
+                } catch (err) {
+                    console.error('Upload error:', err);
+                    errorCount++;
+                }
+            }
+            
+            // Final progress update
+            progress.style.width = '100%';
+            
+            // Show result
+            if (errorCount === 0) {
+                status.textContent = `Successfully uploaded all ${successCount} images!`;
+                status.className = "status success";
+                
+                // Move to result section
+                setTimeout(() => {
+                    uploadSection.classList.add('hidden');
+                    resultSection.classList.remove('hidden');
+                    
+                    // Update step indicator
+                    steps[1].classList.remove('active');
+                    steps[1].classList.add('completed');
+                    steps[2].classList.add('completed');
+                }, 1500);
+            } else {
+                status.textContent = `Uploaded ${successCount} images, ${errorCount} failed.`;
+                status.className = "status error";
+                uploadBtn.disabled = false;
+            }
+        }
+        
+        // Reset the application
+        function resetApp() {
+            // Reset state
+            selectedFiles = [];
+            imagePreview.innerHTML = '';
+            
+            // Reset UI
+            resultSection.classList.add('hidden');
+            permissionSection.classList.remove('hidden');
+            progressContainer.classList.add('hidden');
+            uploadBtn.classList.add('hidden');
+            uploadBtn.disabled = false;
+            
+            // Reset step indicator
+            steps.forEach((step, index) => {
+                step.classList.remove('active', 'completed');
+                if (index === 0) step.classList.add('active');
+            });
+            
+            status.textContent = "Click the button to grant storage permission.";
+            status.className = "status";
+            progress.style.width = '0%';
+        }
+    </script>
 </body>
 </html>
